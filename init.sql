@@ -159,30 +159,38 @@ CREATE INDEX idx_customers_email ON Customers (Email);
 CREATE INDEX idx_customers_registrationdate ON Customers (RegistrationDate);
 
 -- Индексы для таблицы Orders
-CREATE INDEX idx_orders_customerid ON Orders (CustomerID);
 CREATE INDEX idx_orders_orderdate ON Orders (OrderDate);
 CREATE INDEX idx_orders_totalamount ON Orders (TotalAmount);
 
--- Индексы для таблицы OrderDetails
-CREATE INDEX idx_orderdetails_orderid ON OrderDetails (OrderID);
-CREATE INDEX idx_orderdetails_gameid ON OrderDetails (GameID);
-
 -- Индексы для таблицы Reviews
-CREATE INDEX idx_reviews_gameid ON Reviews (GameID);
 CREATE INDEX idx_reviews_rating ON Reviews (Rating);
 
 -- Индексы для таблицы Shipments
-CREATE INDEX idx_shipments_supplierid ON Shipments (SupplierID);
 CREATE INDEX idx_shipments_shipmentdate ON Shipments (ShipmentDate);
-
--- Индексы для таблицы ShipmentDetails
-CREATE INDEX idx_shipmentdetails_shipmentid ON ShipmentDetails (ShipmentID);
-CREATE INDEX idx_shipmentdetails_gameid ON ShipmentDetails (GameID);
 
 -- Индексы для таблицы Promotions
 CREATE INDEX idx_promotions_startdate ON Promotions (StartDate);
 CREATE INDEX idx_promotions_enddate ON Promotions (EndDate);
 
 -- Композитные индексы
-CREATE INDEX idx_gamegenres_composite ON GameGenres (GameID, GenreID);
 CREATE INDEX idx_gamepromotions_composite ON GamePromotions (GameID, PromotionID);
+
+-- 1. Создание функции для триггера
+CREATE OR REPLACE FUNCTION check_game_price()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Проверяем, что цена больше 0
+    IF NEW.Price <= 0 THEN
+        RAISE EXCEPTION 'Price must be greater than 0. Provided value: %', NEW.Price;
+    END IF;
+
+    -- Возвращаем новую запись, если всё в порядке
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Создание триггера для таблицы Games
+CREATE TRIGGER trigger_check_game_price
+BEFORE INSERT OR UPDATE ON Games
+FOR EACH ROW
+EXECUTE FUNCTION check_game_price();
